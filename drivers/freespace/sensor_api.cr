@@ -59,7 +59,7 @@ class Freespace::SensorAPI < PlaceOS::Driver
   @spaces : Hash(String, Space) = {} of String => Space
 
   @[Security(Level::Support)]
-  def subscribe_location(location_id)
+  def subscribe_location(location_id : String)
     response = post(
       "/api/locations/#{location_id}/spaces",
       HTTP::Headers{
