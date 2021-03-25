@@ -108,6 +108,12 @@ class Lenel::OpenAccess < PlaceOS::Driver
     client.lookup BadgeType
   end
 
+  # List badges belonding to a cardholder
+  @[Security(Level::Support)]
+  def list_badges(cardholder_id : Int32)
+    client.lookup Badge, filter: %(personid = "#{cardholder_id}")
+  end
+
   # Creates a new badge of the specied *type*, belonging to *personid* with a
   # specific *id*.
   #
