@@ -73,6 +73,10 @@ shards:
     git: https://github.com/caspiano/http-params-serializable.git
     version: 0.4.1+git.commit.1610a206f676269c1b862281cda3ed82548ced34
 
+  inactive-support:
+    git: https://github.com/spider-gazelle/inactive-support.git
+    version: 0.1.1
+
   ipaddress:
     git: https://github.com/Sija/ipaddress.cr.git
     version: 0.2.1
@@ -176,6 +180,10 @@ shards:
   rendezvous-hash:
     git: https://github.com/caspiano/rendezvous-hash.git
     version: 0.3.1
+
+  responsible:
+    git: https://github.com/place-labs/responsible.git
+    version: 1.2.2
 
   rethinkdb:
     git: https://github.com/kingsleyh/crystal-rethinkdb.git
