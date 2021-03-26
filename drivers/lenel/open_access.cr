@@ -108,10 +108,21 @@ class Lenel::OpenAccess < PlaceOS::Driver
     client.lookup BadgeType
   end
 
-  # List badges belonding to a cardholder
+  # List badges belonging to a cardholder
   @[Security(Level::Support)]
   def list_badges(personid : Int32)
     client.lookup Badge, filter: %(personid = #{personid})
+  end
+
+  # Get badge by id (instead of badgekey)
+  # Note: id is the number in the QR data or burnt to the swipe card. badgekey is Lenel's primary key for badges
+  @[Security(Level::Support)]
+  def lookup_badge(id : Int64)
+    badges = client.lookup Badge, filter: %(id = #{id})
+    if badges.size > 1
+      logger.warn { "duplicate records exist for #{id}" }
+    end
+    badges.first?
   end
 
   # Creates a new badge of the specied *type*, belonging to *personid* with a
