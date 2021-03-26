@@ -126,12 +126,14 @@ class Lenel::OpenAccess::Client
     args.merge(type_name: T.type_name).each do |key, val|
       params.add key.to_s, val unless val.nil?
     end
-    response = ~transport.get(
+    (~transport.get(
       path: "/instances?version=1.0&#{params}",
-    ) 
-    logger.debug "LENEL RESPONSE: #{response}"
-    
-    response >> NamedTuple(
+    ) >> NamedTuple(
+      page_number: Int32?,
+      page_size: Int32?,
+      total_pages: Int32,
+      total_items: Int32,
+      count: Int32,
       item_list: Array(T),
     ))[:item_list]
   end
