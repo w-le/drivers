@@ -126,9 +126,12 @@ class Lenel::OpenAccess::Client
     args.merge(type_name: T.type_name).each do |key, val|
       params.add key.to_s, val unless val.nil?
     end
-    (~transport.get(
+    response = ~transport.get(
       path: "/instances?version=1.0&#{params}",
-    ) >> NamedTuple(
+    ) 
+    logger.debug "LENEL RESPONSE: #{response}"
+    
+    response >> NamedTuple(
       item_list: Array(T),
     ))[:item_list]
   end
