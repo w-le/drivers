@@ -118,18 +118,13 @@ class Lenel::OpenAccess < PlaceOS::Driver
   # Note: id is the number in the QR data or burnt to the swipe card. badgekey is Lenel's primary key for badges
   @[Security(Level::Support)]
   def lookup_badge(id : Int64)
-      params = HTTP::Params.new
-      params.add "type_name", "Badge"
-      params.add "filter", "id = #{id}"
-      transport.http("GET",
-        path: "/instances?version=1.0&#{params}",
-      )
-    # badges = client.lookup Badge, filter: %(id = #{id})
-    # if badges.size > 1
-    #   logger.warn { "duplicate records exist for #{id}" }
-    # end
-    # badges.first?
+    badges = client.lookup Badge, filter: %(id = #{id})
+    if badges.size > 1
+      logger.warn { "duplicate records exist for #{id}" }
+    end
+    badges.first?
   end
+
 
   # Creates a new badge of the specied *type*, belonging to *personid* with a
   # specific *id*.
