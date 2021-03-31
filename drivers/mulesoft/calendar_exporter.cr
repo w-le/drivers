@@ -65,11 +65,15 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
 
   protected def event_already_exists?(new_event : PlaceCalendar::Event, existing_events : Array(PlaceCalendar::Event))
     existing_events.each do |existing_event|
-      return true if new_event.title       == existing_event.title && 
-                     new_event.event_start == existing_event.event_start &&
-                     new_event.event_end   == existing_event.event_end
+      return true if events_match?(new_event, existing_event)
     end
     false
+  end
+
+  protected def events_match?(event_a : PlaceCalendar::Event, event_b : PlaceCalendar::Event)
+    event_a.title       == event_b.title && 
+    event_a.event_start == event_b.event_start &&
+    event_a.event_end   == event_b.event_end
   end
 
 end
