@@ -139,7 +139,7 @@ class Lenel::OpenAccess < PlaceOS::Driver
     activate : Time? = nil,
     deactivate : Time? = nil
   )
-    logger.debug { "creating badge badge for cardholder #{personid}" }
+    logger.debug { "creating badge for cardholder #{personid}" }
     client.create Badge, **args
   end
 
