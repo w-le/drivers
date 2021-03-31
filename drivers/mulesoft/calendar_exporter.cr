@@ -35,8 +35,10 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
     @time_zone = Time::Location.load(time_zone) if time_zone
 
     subscription = system.subscribe(:Bookings_1, :bookings) do |subscription, mulesoft_bookings|
+      logger.debug {"DETECTED changed in Mulesoft Bookings.."}
       # values are always raw JSON strings
       @bookings = Array(Booking).from_json(mulesoft_bookings)
+      logger.debug {"#{@bookings.size} bookings in total"}
       update_events
     end
   end
@@ -50,11 +52,15 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
     from = now - 7.days
     til  = now + 7.days
 
+    logger.debug {"FETCHING existing Calendar events..."}
+
     @existing_events = calendar.list_events(
       calendar_id:  system.email.not_nil!,
       period_start: from.to_unix,
       period_end:   til.to_unix
     ).get.as_a
+    
+    logger.debug {"#{@existing_events.size} events in total"}
 
     @bookings.each {|b| export_booking(b)}
   end
@@ -62,14 +68,17 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
   protected def export_booking(booking : Booking)
     event = booking.to_placeos
 
-    calendar.create_event(
-      title:        event["title"] || event["body"],
-      event_start:  event["event_start"],
-      event_end:    event["event_end"],
-      description:  event["body"],
-      user_id:      system.email.not_nil!,
-      attendees:    [@just_this_system]
-    ) unless event_already_exists?(event, @existing_events)
+    unless event_already_exists?(event, @existing_events)
+      logger.debug {"EXPORTING booking #{event["body"]} starting at #{Time.unix(event["event_start"].not_nil!.to_i).to_local}"}
+      calendar.create_event(
+        title:        event["title"] || event["body"],
+        event_start:  event["event_start"],
+        event_end:    event["event_end"],
+        description:  event["body"],
+        user_id:      system.email.not_nil!,
+        attendees:    [@just_this_system]
+      )
+    end
   end
 
   protected def event_already_exists?(new_event : Hash(String, Int64 | String | Nil), @existing_events : Array(JSON::Any))
