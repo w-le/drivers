@@ -21,9 +21,9 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
   @events   : Array(PlaceCalendar::Event)   = [] of PlaceCalendar::Event
   
   # An array of Attendee that has only the system (room) email address. Generally static
-  @just_this_system : Array(PlaceCalendar::Event::Attendee) = {
-    "name":  system.display_name || system.name,
-    "email": system.email.not_nil!
+  @just_this_system : PlaceCalendar::Event::Attendee = {
+    "email": system.email.not_nil!,
+    "name":  system.display_name || system.name
   }
 
   def on_load
@@ -59,7 +59,7 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
       event_end:    event.event_end,
       description:  event.body,
       user_id:      system.email.not_nil!,
-      attendees:    @just_this_system
+      attendees:    [@just_this_system]
     ) unless event_already_exists?(event, existing_events)
   end
 
