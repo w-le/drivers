@@ -35,6 +35,10 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
     # Max Uncertainty in meters - we don't accept positions that are less certain
     maximum_uncertainty: 25.0,
 
+    # For confident yet inaccurate location data/maps. If a location's variance is below this threshold, increase it to this value.
+    # 0.0 disables the override
+    override_min_variance: 0.0,
+
     # can we use the meraki dashboard API for user lookups
     default_network_id: "network_id",
 
@@ -80,6 +84,8 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
   @acceptable_confidence : Float64 = 5.0
   @maximum_uncertainty : Float64 = 25.0
 
+  @override_min_variance : Float64 = 0.0
+
   @time_multiplier : Float64 = 0.0
   @confidence_multiplier : Float64 = 0.0
   @max_location_age : Time::Span = 6.minutes
@@ -116,6 +122,8 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
 
     @acceptable_confidence = setting?(Float64, :acceptable_confidence) || 5.0
     @maximum_uncertainty = setting?(Float64, :maximum_uncertainty) || 25.0
+
+    @override_min_variance = setting?(Float64, :override_min_variance) || 0.0
 
     @max_location_age = (setting?(UInt32, :max_location_age) || 6).minutes
     # Age we keep a confident value (without drifting towards less confidence)
@@ -690,7 +698,7 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
       return nil
     end
 
-    # existing.time is our ajusted time
+    # existing.time is our adjusted time
     if existing_time = existing.try &.time
       existing = nil if existing_time < ignore_older
     end
@@ -765,6 +773,14 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
         new_loc.x = new_x
         new_loc.y = new_y
         new_loc.variance = new_uncertainty
+
+        # Override variance to a higher value IF it is too low.
+        # This prevents clearly wrong locations being returned in cases where the real life accuracy is low.
+        # e.g. when WAP infrastructure not optimised for location services OR placeos map dimensions do not match meraki floorpans perfectly
+        if @override_min_variance > 0.0
+          new_loc.variance = @override_min_variance if new_loc.variance < @override_min_variance
+        end
+
         location = new_loc
       end
     end
