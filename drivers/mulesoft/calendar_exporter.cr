@@ -68,9 +68,10 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
   end
 
   protected def export_booking(booking : Booking)
+    logger.debug {"Checking for existing bookings: #{booking}"}
     event = booking.to_placeos
 
-    unless event_already_exists?(event, @existing_events)
+    # unless event_already_exists?(event, @existing_events)
       logger.debug {"EXPORTING booking #{event["body"]} starting at #{Time.unix(event["event_start"].not_nil!.to_i).to_local}"}
       calendar.create_event(
         title:        event["title"] || event["body"],
@@ -80,7 +81,7 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
         user_id:      system.email.not_nil!,
         attendees:    [@just_this_system]
       )
-    end
+    # end
   end
 
   protected def event_already_exists?(new_event : Hash(String, Int64 | String | Nil), @existing_events : Array(JSON::Any))
