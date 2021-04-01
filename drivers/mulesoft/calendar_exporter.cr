@@ -31,8 +31,10 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
   def on_update
     subscriptions.clear
     
+
     time_zone = setting?(String, :calendar_time_zone).presence
     @time_zone = Time::Location.load(time_zone) if time_zone
+    self[:timezone] = Time.local.to_s
 
     subscription = system.subscribe(:Bookings_1, :bookings) do |subscription, mulesoft_bookings|
       logger.debug {"DETECTED changed in Mulesoft Bookings.."}
@@ -44,7 +46,7 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
   end
 
   def status()
-    "WIP"
+    @bookings
   end
 
   def update_events
