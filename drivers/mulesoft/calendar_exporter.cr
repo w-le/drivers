@@ -47,7 +47,7 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
     "WIP"
   end
 
-  protected def update_events
+  def update_events
     now = Time.local @time_zone
     from = now - 7.days
     til  = now + 7.days
