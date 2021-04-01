@@ -15,7 +15,7 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
   accessor calendar : Calendar_1
 
   @time_zone : Time::Location = Time::Location.load("Australia/Sydney")
-  @bookings : Array(Booking) = [] of Booking
+  @bookings : Array( Hash(String, Int64 | String | Nil) ) = [] of Hash(String, Int64 | String | Nil)
   @existing_events : Array(JSON::Any) = [] of JSON::Any
   # An array of Attendee that has only the system (room) email address. Generally static
   @just_this_system : NamedTuple(email: String, name: String) = {email: "", name: ""}
@@ -39,7 +39,7 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
     subscription = system.subscribe(:Bookings_1, :bookings) do |subscription, mulesoft_bookings|
       logger.debug {"DETECTED changed in Mulesoft Bookings.."}
       # values are always raw JSON strings
-      @bookings = Array(Booking).from_json(mulesoft_bookings)
+      @bookings = Array( Hash(String, Int64 | String | Nil) ).from_json(mulesoft_bookings)
       logger.debug {"#{@bookings.size} bookings in total"}
       update_events
     end
@@ -67,17 +67,16 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
     @bookings.each {|b| export_booking(b)}
   end
 
-  protected def export_booking(booking : Booking)
-    logger.debug {"Checking for existing bookings: #{booking}"}
-    event = booking.to_placeos
+  protected def export_booking(booking : Hash(String, Int64 | String | Nil))
+    logger.debug {"Checking for existing events that match: #{booking}"}
 
     # unless event_already_exists?(event, @existing_events)
-      logger.debug {"EXPORTING booking #{event["body"]} starting at #{Time.unix(event["event_start"].not_nil!.to_i).to_local}"}
+      logger.debug {"EXPORTING booking #{booking["body"]} starting at #{Time.unix(booking["event_start"].not_nil!.to_i).to_local}"}
       calendar.create_event(
-        title:        event["title"] || event["body"],
-        event_start:  event["event_start"],
-        event_end:    event["event_end"],
-        description:  event["body"],
+        title:        booking["title"] || booking["body"],
+        event_start:  booking["event_start"],
+        event_end:    booking["event_end"],
+        description:  booking["body"],
         user_id:      system.email.not_nil!,
         attendees:    [@just_this_system]
       )
