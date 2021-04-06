@@ -428,9 +428,9 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
         # This prevents clearly wrong locations being returned in cases where the real life accuracy is low.
         # e.g. when WAP infrastructure not optimised for location services OR placeos map dimensions do not match meraki floorpans perfectly
         variance = location.variance
-        if @override_min_variance > 0.0
-          variance = @override_min_variance if variance < @override_min_variance
-          logger.debug { "OVERRIDING variance of #{location.variance} to #{@override_min_variance}" }
+        if @override_min_variance > 0.0 && variance < @override_min_variance
+            variance = @override_min_variance 
+            logger.debug { "OVERRIDING variance of #{location.variance} to #{@override_min_variance}" }
         end
 
         loc = {
