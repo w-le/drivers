@@ -128,6 +128,7 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
     @maximum_uncertainty = setting?(Float64, :maximum_uncertainty) || 25.0
 
     @override_min_variance = setting?(Float64, :override_min_variance) || 0.0
+    @regex_filter_device_os = setting?(String, :regex_filter_device_os) || nil
 
     @max_location_age = (setting?(UInt32, :max_location_age) || 6).minutes
     # Age we keep a confident value (without drifting towards less confidence)
