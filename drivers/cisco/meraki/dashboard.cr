@@ -670,9 +670,11 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
         logger.debug { "parsing new observation for #{client_mac}" } if @debug_webhook
 
         # If a filter is set, then skip this device unless it matches
-        if @regex_filter_device_os && observation.os && /#{@regex_filter_device_os}/.match(observation.os.not_nil!)
-          logger.debug { "IGNORING observation for #{client_mac} as OS does not regex match" } if @debug_webhook
-          next
+        if @regex_filter_device_os && observation.os 
+          unless /#{@regex_filter_device_os}/.match(observation.os.not_nil!)
+            logger.debug { "IGNORING observation for #{client_mac} as OS does not regex match" } if @debug_webhook
+            next
+          end
         end
 
         location = parse(existing, ignore_older, drift_older, observation)
