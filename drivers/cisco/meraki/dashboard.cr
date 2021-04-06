@@ -424,6 +424,14 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
         lat = location.lat
         lon = location.lng
 
+        # Override variance to a higher value IF it is too low.
+        # This prevents clearly wrong locations being returned in cases where the real life accuracy is low.
+        # e.g. when WAP infrastructure not optimised for location services OR placeos map dimensions do not match meraki floorpans perfectly
+        variance = location.variance
+        if @override_min_variance > 0.0
+          variance = @override_min_variance if variance < @override_min_variance
+        end
+
         loc = {
           "location"          => "wireless",
           "coordinates_from"  => "bottom-left",
@@ -433,7 +441,7 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
           "lat"               => lat,
           "s2_cell_id"        => lat ? S2Cells::LatLon.new(lat.not_nil!, lon.not_nil!).to_token(@s2_level) : nil,
           "mac"               => location.mac,
-          "variance"          => location.variance,
+          "variance"          => variance,
           "last_seen"         => location.time.to_unix,
           "meraki_floor_id"   => location.floor_plan_id,
           "meraki_floor_name" => location.floor_plan_name,
@@ -789,12 +797,6 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
         new_loc.variance = new_uncertainty
         
         location = new_loc
-      end
-      # Override variance to a higher value IF it is too low.
-      # This prevents clearly wrong locations being returned in cases where the real life accuracy is low.
-      # e.g. when WAP infrastructure not optimised for location services OR placeos map dimensions do not match meraki floorpans perfectly
-      if @override_min_variance > 0.0
-        location.variance = @override_min_variance if location.variance < @override_min_variance
       end
     end
 
