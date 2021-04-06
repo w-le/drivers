@@ -39,6 +39,9 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
     # 0.0 disables the override
     override_min_variance: 0.0,
 
+    # Optionally only store locations for devices whose "os" property matches this regex string.
+    regex_filter_device_os: nil,
+
     # can we use the meraki dashboard API for user lookups
     default_network_id: "network_id",
 
@@ -85,6 +88,7 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
   @maximum_uncertainty : Float64 = 25.0
 
   @override_min_variance : Float64 = 0.0
+  @regex_filter_device_os : String | Nil = nil
 
   @time_multiplier : Float64 = 0.0
   @confidence_multiplier : Float64 = 0.0
@@ -663,6 +667,13 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
         existing = @locations[client_mac]?
 
         logger.debug { "parsing new observation for #{client_mac}" } if @debug_webhook
+
+        # If a filter is set, then skip this device unless it matches
+        if @regex_filter_device_os && observation.os && /#{@regex_filter_device_os}/.match(observation.os.not_nil!)
+          logger.debug { "IGNORING observation for #{client_mac} as OS does not regex match" } if @debug_webhook
+          next
+        end
+
         location = parse(existing, ignore_older, drift_older, observation)
         if location
           @locations[client_mac] = location
@@ -773,15 +784,14 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
         new_loc.x = new_x
         new_loc.y = new_y
         new_loc.variance = new_uncertainty
-
-        # Override variance to a higher value IF it is too low.
-        # This prevents clearly wrong locations being returned in cases where the real life accuracy is low.
-        # e.g. when WAP infrastructure not optimised for location services OR placeos map dimensions do not match meraki floorpans perfectly
-        if @override_min_variance > 0.0
-          new_loc.variance = @override_min_variance if new_loc.variance < @override_min_variance
-        end
-
+        
         location = new_loc
+      end
+      # Override variance to a higher value IF it is too low.
+      # This prevents clearly wrong locations being returned in cases where the real life accuracy is low.
+      # e.g. when WAP infrastructure not optimised for location services OR placeos map dimensions do not match meraki floorpans perfectly
+      if @override_min_variance > 0.0
+        location.variance = @override_min_variance if location.variance < @override_min_variance
       end
     end
 
