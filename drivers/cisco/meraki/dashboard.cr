@@ -408,6 +408,19 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
         if location = locate_mac(mac)
           client = @client_details[mac]?
 
+          # If a filter is set, then ignore this device unless it matches
+          if @regex_filter_device_os
+            if client && client.os
+              unless /#{@regex_filter_device_os}/.match(client.os.not_nil!)
+                logger.debug { "[#{username}] IGNORING #{mac} as OS does not match regex filter" } if @debug_webhook
+                next
+              end
+            else
+              logger.debug { "[#{username}] IGNORING #{mac} as OS is UNKNOWN" } if @debug_webhook
+              next
+            end
+          end
+
           # We set these here to speed up processing
           location.client = client
           location.mac = mac
@@ -677,19 +690,6 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
         existing = @locations[client_mac]?
 
         logger.debug { "parsing new observation for #{client_mac}" } if @debug_webhook
-
-        # If a filter is set, then skip this device unless it matches
-        if @regex_filter_device_os
-          if observation.os
-            unless /#{@regex_filter_device_os}/.match(observation.os.not_nil!)
-              logger.debug { "IGNORING observation for #{client_mac} as OS does not regex match" } if @debug_webhook
-              next
-            end
-          else
-            logger.debug { "IGNORING observation for #{client_mac} as OS is UNKNOWN" } if @debug_webhook
-            next
-          end
-        end
 
         location = parse(existing, ignore_older, drift_older, observation)
         if location
