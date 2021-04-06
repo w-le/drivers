@@ -412,11 +412,11 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
           if @regex_filter_device_os
             if client && client.os
               unless /#{@regex_filter_device_os}/.match(client.os.not_nil!)
-                logger.debug { "[#{username}] IGNORING #{mac} as OS does not match regex filter" } if @debug_webhook
+                logger.debug { "[#{username}] IGNORING #{mac} as OS does not match regex filter" }
                 next
               end
             else
-              logger.debug { "[#{username}] IGNORING #{mac} as OS is UNKNOWN" } if @debug_webhook
+              logger.debug { "[#{username}] IGNORING #{mac} as OS is UNKNOWN" }
               next
             end
           end
