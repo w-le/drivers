@@ -430,6 +430,7 @@ class Cisco::Meraki::Dashboard < PlaceOS::Driver
         variance = location.variance
         if @override_min_variance > 0.0
           variance = @override_min_variance if variance < @override_min_variance
+          logger.debug { "OVERRIDING variance of #{location.variance} to #{override_min_variance}" }
         end
 
         loc = {
