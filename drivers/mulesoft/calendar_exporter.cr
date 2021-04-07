@@ -51,8 +51,8 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
 
   def update_events
     now = Time.local @time_zone
-    from = now - 7.days
-    til  = now + 7.days
+    from = now - 14.days
+    til  = now + 14.days
 
     logger.debug {"FETCHING existing Calendar events..."}
 
