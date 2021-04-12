@@ -91,7 +91,7 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
   end
 
   protected def events_match?(event_a : Hash(String, Int64 | String | Nil), event_b : Hash(String, JSON::Any))
-    event_a.select("title", "event_start", "event_end") == event_b.select("title", "event_start", "event_end")
+    event_a.select("event_start", "event_end") == event_b.select("event_start", "event_end")
   end
 
 end
