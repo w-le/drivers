@@ -78,7 +78,7 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
     logger.debug {"Checking for existing events that match: #{booking}"}
 
     unless event_already_exists?(booking, @existing_events)
-      logger.debug {"EXPORTING booking #{booking["body"]} starting at #{Time.unix(booking["event_start"].not_nil!.to_i).to_local}"}
+      logger.debug {">>> EXPORTING booking #{booking["body"]} starting at #{Time.unix(booking["event_start"].not_nil!.to_i).to_local}"}
       calendar.create_event(
         title:        booking["title"],
         event_start:  booking["event_start"],
