@@ -73,7 +73,7 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
 
   protected def export_booking(booking : Hash(String, Int64 | String | Nil))
     # Mulesoft booking titles are often nil. Use the body instead in this case
-    booking["title"] ||= booking["body"]
+    booking["title"] = booking["body"] if booking["title"].nil?
 
     logger.debug {"Checking for existing events that match: #{booking}"}
 
