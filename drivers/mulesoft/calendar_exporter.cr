@@ -72,10 +72,10 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
 
 
   protected def export_booking(booking : Hash(String, Int64 | String | Nil))
-    logger.debug {"Checking for existing events that match: #{booking}"}
-
     # Mulesoft booking titles are often nil. Use the body instead in this case
     booking["title"] ||= booking["body"]
+
+    logger.debug {"Checking for existing events that match: #{booking}"}
 
     unless event_already_exists?(booking, @existing_events)
       logger.debug {"EXPORTING booking #{booking["body"]} starting at #{Time.unix(booking["event_start"].not_nil!.to_i).to_local}"}
