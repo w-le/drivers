@@ -31,41 +31,45 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
   def on_update
     subscriptions.clear
     
-
     time_zone = setting?(String, :calendar_time_zone).presence
     @time_zone = Time::Location.load(time_zone) if time_zone
     self[:timezone] = Time.local.to_s
 
     subscription = system.subscribe(:Bookings_1, :bookings) do |subscription, mulesoft_bookings|
       logger.debug {"DETECTED changed in Mulesoft Bookings.."}
-      # values are always raw JSON strings
       @bookings = Array( Hash(String, Int64 | String | Nil) ).from_json(mulesoft_bookings)
       logger.debug {"#{@bookings.size} bookings in total"}
+
       update_events
+      @bookings.each {|b| export_booking(b)}
     end
   end
 
   def status()
-    @bookings
+    {
+      "bookings": @bookings,
+      "events":   @existing_events
+    }
   end
 
   def update_events
-    now = Time.local @time_zone
-    from = now - 14.days
-    til  = now + 14.days
-
     logger.debug {"FETCHING existing Calendar events..."}
+    @existing_events = fetch_events()
+    logger.debug {"#{@existing_events.size} events in total"}
+  end
 
-    @existing_events = calendar.list_events(
+  protected def fetch_events(past_span : Time::Span = 14.days, future_span : Time::Span = 14.days)
+    now = Time.local @time_zone
+    from = now - past_span
+    til  = now + future_span
+
+    calendar.list_events(
       calendar_id:  system.email.not_nil!,
       period_start: from.to_unix,
       period_end:   til.to_unix
     ).get.as_a
-    
-    logger.debug {"#{@existing_events.size} events in total"}
-
-    @bookings.each {|b| export_booking(b)}
   end
+
 
   protected def export_booking(booking : Hash(String, Int64 | String | Nil))
     logger.debug {"Checking for existing events that match: #{booking}"}
@@ -83,15 +87,24 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
     end
   end
 
-  protected def event_already_exists?(new_event : Hash(String, Int64 | String | Nil), @existing_events : Array(JSON::Any))
-    @existing_events.each do |existing_event|
+  protected def event_already_exists?(new_event : Hash(String, Int64 | String | Nil), existing_events : Array(JSON::Any))
+    existing_events.each do |existing_event|
       return true if events_match?(new_event, existing_event.as_h)
     end
     false
   end
 
   protected def events_match?(event_a : Hash(String, Int64 | String | Nil), event_b : Hash(String, JSON::Any))
-    event_a.select("event_start", "event_end") == event_b.select("event_start", "event_end")
+    event_a.select("event_start", "event_end", "title") == event_b.select("event_start", "event_end", "title")
+  end
+
+  def delete_all_events(past_days : Int32 = 14, future_days : Int32 = 14)
+    events = fetch_events(past_span: past_days.days, future_span: future_days.days)
+    event_ids = events.map { |e| e["id"]}
+    event_ids.each do |event_id|
+      calendar.delete_event(calendar_id: system.email.not_nil!, event_id: event_id)
+    end
+    "Deleted #{event_ids.size} events"
   end
 
 end
