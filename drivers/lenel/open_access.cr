@@ -150,6 +150,15 @@ class Lenel::OpenAccess < PlaceOS::Driver
     client.delete Badge, **args
   end
 
+  def delete_badges(badgekeys : Array(Int32)) : Int
+    deleted : UInt32 = 0
+    badgekeys.each do |badgekey|
+      delete(badgekey)
+      deleted += 1
+    end
+    deleted
+  end
+
   # Lookup a cardholder by *email* address.
   @[Security(Level::Support)]
   def lookup_cardholder(email : String)
