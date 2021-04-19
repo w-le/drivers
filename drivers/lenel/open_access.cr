@@ -143,6 +143,28 @@ class Lenel::OpenAccess < PlaceOS::Driver
     client.create Badge, **args
   end
 
+  def create_badge_epoch(
+    type : Int32,
+    id : Int64,
+    personid : Int32,
+    activate_epoch : Int32,
+    deactivate_epoch : Int32,
+    uselimit : Int32? = nil
+  )
+    activate = Time.unix(activate_epoch)
+    deactivate = Time.unix(deactivate_epoch)
+
+    logger.debug { "creating badge for cardholder #{personid}, valid from: #{activate} til #{deactivate}" }
+    client.create(Badge,
+      type: type,
+      id: id,
+      personid: personid,
+      activate: activate,
+      deactivate: deactivate,
+      uselimit: uselimit
+    )
+  end
+
   # Deletes a badge with the specified *badgekey*.
   @[Security(Level::Administrator)]
   def delete_badge(badgekey : Int32) : Nil
