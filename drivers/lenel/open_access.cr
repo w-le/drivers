@@ -153,8 +153,19 @@ class Lenel::OpenAccess < PlaceOS::Driver
   )
     activate = Time.unix(activate_epoch)
     deactivate = Time.unix(deactivate_epoch)
-
-    logger.debug { "creating badge for cardholder #{personid}, valid from: #{activate} til #{deactivate}" }
+    logger.debug { "Creating badge for cardholder #{personid}, valid from: #{activate} til #{deactivate}" }
+    
+    logger.debug { 
+      Badge.partial(
+        type: type,
+        id: id,
+        personid: personid,
+        activate: activate,
+        deactivate: deactivate,
+        uselimit: uselimit
+      )
+    }
+    
     client.create(Badge,
       type: type,
       id: id,
