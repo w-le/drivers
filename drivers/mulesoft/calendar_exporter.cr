@@ -14,6 +14,7 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
 
   accessor calendar : Calendar_1
 
+  @time_zone_string : String | Nil = "Australia/Sydney"
   @time_zone : Time::Location = Time::Location.load("Australia/Sydney")
   @bookings : Array( Hash(String, Int64 | String | Nil) ) = [] of Hash(String, Int64 | String | Nil)
   @existing_events : Array(JSON::Any) = [] of JSON::Any
@@ -31,8 +32,8 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
   def on_update
     subscriptions.clear
     
-    time_zone = setting?(String, :calendar_time_zone).presence
-    @time_zone = Time::Location.load(time_zone) if time_zone
+    @time_zone_string = setting?(String, :calendar_time_zone).presence
+    @time_zone = Time::Location.load(@time_zone_string.not_nil!) if @time_zone_string
     self[:timezone] = Time.local.to_s
 
     subscription = system.subscribe(:Bookings_1, :bookings) do |subscription, mulesoft_bookings|
@@ -83,6 +84,7 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
         title:        booking["title"],
         event_start:  booking["event_start"],
         event_end:    booking["event_end"],
+        timezone:     @time_zone_string,
         description:  booking["body"],
         user_id:      system.email.not_nil!,
         attendees:    [@just_this_system]
