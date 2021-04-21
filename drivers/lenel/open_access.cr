@@ -22,7 +22,7 @@ class Lenel::OpenAccess < PlaceOS::Driver
   private getter client : OpenAccess::Client do
     transport = PlaceOS::HTTPClient.new self
     transport.before_request do |req|
-      logger.debug { req.inspect }
+      logger.debug { "Lenel request BODY #{req.body}" }
     end
     app_id = setting String, :application_id
     OpenAccess::Client.new transport, app_id
