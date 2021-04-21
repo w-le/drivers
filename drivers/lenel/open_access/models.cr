@@ -68,7 +68,6 @@ module Lenel::OpenAccess::Models
       {% for key in T.keys %}
         {% raise %(no "#{key}" property on #{@type.name}) unless @type.has_method? key %}
       {% end %}
-      puts "\n** LENEL Element properties: #{properties} **\n"
       properties
     end
   end
