@@ -154,8 +154,8 @@ class Lenel::OpenAccess < PlaceOS::Driver
     deactivate_epoch : Int32,
     uselimit : Int32? = nil
   )
-    activate = Time.unix(activate_epoch)
-    deactivate = Time.unix(deactivate_epoch)
+    activate = Time.unix(activate_epoch).in Time::Location.load("Asia/Dubai")
+    deactivate = Time.unix(deactivate_epoch).in Time::Location.load("Asia/Dubai")
     logger.debug { "Creating badge for cardholder #{personid}, valid from: #{activate} til #{deactivate}" }
     
     create_badge(
