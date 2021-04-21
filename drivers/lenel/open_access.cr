@@ -21,6 +21,9 @@ class Lenel::OpenAccess < PlaceOS::Driver
   
   private getter client : OpenAccess::Client do
     transport = PlaceOS::HTTPClient.new self
+    transport.before_request do |req|
+      logger.debug { req.inspect }
+    end
     app_id = setting String, :application_id
     OpenAccess::Client.new transport, app_id
   end
@@ -155,18 +158,7 @@ class Lenel::OpenAccess < PlaceOS::Driver
     deactivate = Time.unix(deactivate_epoch)
     logger.debug { "Creating badge for cardholder #{personid}, valid from: #{activate} til #{deactivate}" }
     
-    logger.debug { 
-      Badge.partial(
-        type: type,
-        id: id,
-        personid: personid,
-        activate: activate,
-        deactivate: deactivate,
-        uselimit: uselimit
-      )
-    }
-    
-    client.create(Badge,
+    create_badge(
       type: type,
       id: id,
       personid: personid,
@@ -175,6 +167,20 @@ class Lenel::OpenAccess < PlaceOS::Driver
       uselimit: uselimit
     )
   end
+
+  @[Security(Level::Administrator)]
+  def update_badge(
+    badgekey : Int32,
+    id : Int64? = nil,
+    personid : Int32? = nil,
+    uselimit : Int32? = nil,
+    activate : Time? = nil,
+    deactivate : Time? = nil
+  )
+    logger.debug { "Updating badge #{badgekey}" }
+    client.update Badge, **args
+  end
+
 
   # Deletes a badge with the specified *badgekey*.
   @[Security(Level::Administrator)]
