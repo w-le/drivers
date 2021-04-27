@@ -159,7 +159,7 @@ class Lenel::OpenAccess::Client
         type_name: T.type_name,
         property_value_map: T.partial(**props)
       }.to_json
-    ) >> T
+    ) >> Models::Untyped
   end
 
   # Deletes an instance of *entity*.
