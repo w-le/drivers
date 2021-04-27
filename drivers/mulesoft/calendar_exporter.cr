@@ -80,13 +80,14 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
 
     unless event_already_exists?(booking, @existing_events)
       new_event = {
-        title:        booking["title"],
+        title:        "#{booking["recurring_master_id"]} #{booking["title"]}",
         event_start:  booking["event_start"],
         event_end:    booking["event_end"],
         timezone:     @time_zone_string,
         description:  booking["body"],
         user_id:      system.email.not_nil!,
-        attendees:    [@just_this_system]
+        attendees:    [@just_this_system],
+        location:     system.name.not_nil!
       }
       logger.debug {">>> EXPORTING booking #{new_event}"}
       calendar.create_event(**new_event)
