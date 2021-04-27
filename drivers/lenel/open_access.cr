@@ -180,6 +180,27 @@ class Lenel::OpenAccess < PlaceOS::Driver
     client.update Badge, **args
   end
 
+  @[Security(Level::Administrator)]
+  def update_badge_epoch(
+    badgekey : Int32,
+    activate_epoch : Int32,
+    deactivate_epoch : Int32,
+    id : Int64? = nil,
+    uselimit : Int32? = nil,
+  )
+    activate = Time.unix(activate_epoch).in Time::Location.load("Asia/Dubai")
+    deactivate = Time.unix(deactivate_epoch).in Time::Location.load("Asia/Dubai")
+    logger.debug { "Updating badge #{badgekey} with id #{id} valid from: #{activate} til #{deactivate}" }    
+
+    update_badge(
+      badgekey: badgekey,
+      id: id,
+      activate: activate,
+      deactivate: deactivate,
+      uselimit: uselimit
+    )
+  end
+
 
   # Deletes a badge with the specified *badgekey*.
   @[Security(Level::Administrator)]
