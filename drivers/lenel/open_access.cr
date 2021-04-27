@@ -172,7 +172,6 @@ class Lenel::OpenAccess < PlaceOS::Driver
   def update_badge(
     badgekey : Int32,
     id : Int64? = nil,
-    personid : Int32? = nil,
     uselimit : Int32? = nil,
     activate : Time? = nil,
     deactivate : Time? = nil
