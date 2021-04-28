@@ -75,12 +75,12 @@ class MuleSoft::CalendarExporter < PlaceOS::Driver
   protected def export_booking(booking : Hash(String, Int64 | String | Nil))
     # Mulesoft booking titles are often nil. Use the body instead in this case
     booking["title"] = booking["body"] if booking["title"].nil?
-
+    booking["title"] = "#{booking["recurring_master_id"]} #{booking["title"]}"
     logger.debug {"Checking for existing events that match: #{booking}"}
 
     unless event_already_exists?(booking, @existing_events)
       new_event = {
-        title:        "#{booking["recurring_master_id"]} #{booking["title"]}",
+        title:        booking["title"],
         event_start:  booking["event_start"],
         event_end:    booking["event_end"],
         timezone:     @time_zone_string,
