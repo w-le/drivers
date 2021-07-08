@@ -1,16 +1,20 @@
 name: drivers
 version: 2.2.0
 
+# compile target
+targets:
+  test-harness:
+    main: src/app.cr
+
 dependencies:
   action-controller:
     github: spider-gazelle/action-controller
-    version: ~> 4.4
 
   email:
     github: arcage/crystal-email
 
-  inactive-support:
-    github: spider-gazelle/inactive-support
+  exec_from:
+    github: place-labs/exec_from
 
   jwt:
     github: crystal-community/jwt
@@ -29,7 +33,7 @@ dependencies:
 
   placeos-compiler:
     github: placeos/compiler
-    version: ~> 3.5
+    version: ~> 3.3
 
   placeos-driver:
     github: placeos/driver
@@ -39,10 +43,6 @@ dependencies:
   placeos:
     github: placeos/crystal-client
     version: ~> 2.2
-
-  # HTTP Client helper
-  responsible:
-    github: place-labs/responsible
 
   rwlock:
     github: spider-gazelle/readers-writer
@@ -54,6 +54,13 @@ dependencies:
   pars:
     github: place-labs/pars
     branch: master
+
+  responsible:
+    github: place-labs/responsible
+    version: ~>1.2.2
+
+  inactive-support:
+    github: spider-gazelle/inactive-support
 
   # For lat lon location indexing
   s2_cells:
@@ -69,16 +76,3 @@ dependencies:
   # the STOMP protocol
   stomp:
     github: spider-gazelle/stomp
-
-  # MQTT protocol
-  mqtt:
-    github: spider-gazelle/crystal-mqtt
-
-  # XML to JSON convertor
-  oq:
-    github: blacksmoke16/oq
-    version: ~> 1.2
-
-  awscr-signer:
-    github: taylorfinnell/awscr-signer
-    version: ~> 0.8
