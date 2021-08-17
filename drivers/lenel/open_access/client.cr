@@ -177,9 +177,10 @@ class Lenel::OpenAccess::Client
       params.add key.to_s, val unless val.nil?
     end
     response = transport.get(path: "/logged_events?version=1.0&#{params}")
+    response.body
     # >> NamedTuple(
     #   page_number: Int32?,
-    #   page_size: Int32?,
+    #   page_size: Int32?,1
     #   total_pages: Int32,
     #   total_items: Int32,
     #   count: Int32,
