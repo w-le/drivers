@@ -85,8 +85,8 @@ module Lenel::OpenAccess::Models
   end
 
   struct Event < Element
-    getter serial_number : Int32
-    getter timestamp : Time
+    getter serial_number : Int32?
+    getter timestamp : Time?
     getter description : String?
     getter controller_id : Int32
     getter device_id : Int32
