@@ -171,20 +171,19 @@ class Lenel::OpenAccess::Client
     page_number : Int32? = nil,
     page_size : Int32? = nil,
     order_by : String? = nil
-  ) : Array(Event)
+  )
     params = HTTP::Params.new
     args.each do |key, val|
       params.add key.to_s, val unless val.nil?
     end
-    (~transport.get(
-      path: "/logged_events?version=1.0&#{params}",
-    ) >> NamedTuple(
-      page_number: Int32?,
-      page_size: Int32?,
-      total_pages: Int32,
-      total_items: Int32,
-      count: Int32,
-      item_list: Array(Event),
-    ))[:item_list]
+    response = ~transport.get(path: "/logged_events?version=1.0&#{params}") 
+    # >> NamedTuple(
+    #   page_number: Int32?,
+    #   page_size: Int32?,
+    #   total_pages: Int32,
+    #   total_items: Int32,
+    #   count: Int32,
+    #   item_list: Array(Event),
+    # ))[:item_list]
   end
 end
