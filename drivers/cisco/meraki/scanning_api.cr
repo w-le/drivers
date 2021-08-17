@@ -1,10 +1,55 @@
-module Cisco; end
-
 require "json"
 require "./geo"
 
 module Cisco::Meraki
   ISO8601 = "%FT%T%z"
+
+  class Organization
+    include JSON::Serializable
+
+    property id : String
+    property name : String
+    property url : String
+    property api : NamedTuple(enabled: Bool)
+  end
+
+  class Network
+    include JSON::Serializable
+
+    property id : String
+
+    @[JSON::Field(key: "organizationId")]
+    property organization_id : String
+
+    property name : String
+
+    @[JSON::Field(key: "productTypes")]
+    property product_types : Array(String)
+
+    @[JSON::Field(key: "timeZone")]
+    property time_zone : String
+    property tags : Array(String)
+    property url : String
+
+    @[JSON::Field(key: "enrollmentString")]
+    property enrollment_string : String?
+    property notes : String?
+  end
+
+  class CameraAnalytics
+    include JSON::Serializable
+    ISO8601_MS = "%FT%T.%3N%z"
+
+    class PeopleCount
+      include JSON::Serializable
+
+      property person : Int32
+    end
+
+    @[JSON::Field(converter: Time::Format.new(Cisco::Meraki::CameraAnalytics::ISO8601_MS))]
+    property ts : Time
+    property zones : Hash(Int64, PeopleCount)
+  end
 
   class FloorPlan
     include JSON::Serializable
@@ -37,7 +82,7 @@ module Cisco::Meraki
     # Used for caching the location calculated for this device
     # where an observation doesn't have location values but has a closest WAP
     @[JSON::Field(ignore: true)]
-    property location : Location?
+    property location : DeviceLocation?
 
     @[JSON::Field(key: "floorPlanId")]
     property floor_plan_id : String?
@@ -45,6 +90,10 @@ module Cisco::Meraki
     property lat : Float64
     property lng : Float64
     property mac : String
+
+    property serial : String
+    property model : String
+    property firmware : String
 
     # This is useful for when we have to map meraki IDs to our zones
     property name : String?
@@ -95,7 +144,7 @@ module Cisco::Meraki
     property rssi : Int32
   end
 
-  class Location
+  class DeviceLocation
     include JSON::Serializable
 
     def initialize(@x, @y, @lng, @lat, @variance, @floor_plan_id, @floor_plan_name, @time)
@@ -105,9 +154,9 @@ module Cisco::Meraki
       @nearest_ap_tags = [] of String
     end
 
-    def self.calculate_location(floor : FloorPlan, device : NetworkDevice, time : Time) : Location
+    def self.calculate_location(floor : FloorPlan, device : NetworkDevice, time : Time) : DeviceLocation
       distance = Geo.calculate_xy(floor.top_left, floor.bottom_left, floor.bottom_right, device, floor.to_distance)
-      Location.new(distance.x, distance.y, device.lng, device.lat, 25_f64, floor.id, floor.name, time)
+      DeviceLocation.new(distance.x, distance.y, device.lng, device.lat, 25_f64, floor.id, floor.name, time)
     end
 
     # NOTE:: This is not part of the location response,
@@ -194,7 +243,7 @@ module Cisco::Meraki
 
     @[JSON::Field(key: "latestRecord")]
     property latest_record : LatestRecord
-    property locations : Array(Location)
+    property locations : Array(DeviceLocation)
   end
 
   class Data

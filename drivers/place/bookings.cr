@@ -1,8 +1,10 @@
-module Place; end
-
+require "placeos-driver"
 require "place_calendar"
+require "placeos-driver/interface/locatable"
 
 class Place::Bookings < PlaceOS::Driver
+  include Interface::Locatable
+
   descriptive_name "PlaceOS Bookings"
   generic_name :Bookings
 
@@ -14,7 +16,10 @@ class Place::Bookings < PlaceOS::Driver
     disable_end_meeting:    false,
     pending_period:         5,
     pending_from:           5,
-    cache_polling_period:   2,
+    cache_polling_period:   5,
+
+    # as graph API is eventually consistent we want to delay syncing for a moment
+    change_event_sync_delay: 5,
 
     control_ui:  "https://if.panel/to_be_used_for_control",
     catering_ui: "https://if.panel/to_be_used_for_catering",
@@ -30,6 +35,7 @@ class Place::Bookings < PlaceOS::Driver
   @pending_period : Time::Span = 5.minutes
   @pending_before : Time::Span = 5.minutes
   @bookings : Array(JSON::Any) = [] of JSON::Any
+  @change_event_sync_delay : UInt32 = 5_u32
 
   def on_load
     monitor("staff/event/changed") { |_subscription, payload| check_change(payload) }
@@ -61,6 +67,8 @@ class Place::Bookings < PlaceOS::Driver
 
     pending_before = setting?(UInt32, :pending_before) || 5_u32
     @pending_before = pending_before.minutes
+
+    @change_event_sync_delay = setting?(UInt32, :change_event_sync_delay) || 5_u32
 
     @last_booking_started = setting?(Int64, :last_booking_started) || 0_i64
 
@@ -230,9 +238,9 @@ class Place::Bookings < PlaceOS::Driver
 
       self[:in_use] = booked && !current_pending
     else
-      self[:current_pending] = nil
-      self[:next_pending] = nil
-      self[:pending] = nil
+      self[:current_pending] = false
+      self[:next_pending] = false
+      self[:pending] = false
 
       self[:in_use] = booked
     end
@@ -250,6 +258,10 @@ class Place::Bookings < PlaceOS::Driver
     status?(PlaceCalendar::Event, :next_booking)
   end
 
+  protected def pending : PlaceCalendar::Event?
+    status?(PlaceCalendar::Event, :next_booking)
+  end
+
   class StaffEventChange
     include JSON::Serializable
 
@@ -264,16 +276,83 @@ class Place::Bookings < PlaceOS::Driver
   protected def check_change(payload : String)
     event = StaffEventChange.from_json(payload)
     if event.system_id == system.id
+      sleep @change_event_sync_delay
       poll_events
       check_current_booking
     else
       matching = @bookings.select { |b| b["id"] == event.event_id }
       if matching
+        sleep @change_event_sync_delay
         poll_events
         check_current_booking
       end
     end
   rescue error
     logger.error { "processing change event: #{error.inspect_with_backtrace}" }
+  end
+
+  # ===================================
+  # Locatable Interface functions
+  # ===================================
+  protected def to_location_format(events : Enumerable(PlaceCalendar::Event))
+    sys = system.config
+    events.map do |event|
+      event_ends = event.all_day? ? event.event_start.in(@time_zone).at_end_of_day : event.event_end.not_nil!
+      {
+        location: :meeting,
+        mac:      @calendar_id,
+        event_id: event.id,
+        map_id:   sys.map_id,
+        sys_id:   sys.id,
+        ends_at:  event_ends.to_unix,
+        private:  !!event.private?,
+      }
+    end
+  end
+
+  def locate_user(email : String? = nil, username : String? = nil)
+    logger.debug { "searching for #{email}, #{username}" }
+
+    email = email.to_s.downcase
+    username = username.to_s.downcase
+    matching_events = [] of PlaceCalendar::Event
+
+    if event = current
+      emails = event.attendees.map(&.email.downcase)
+      if host = event.host
+        emails << host.downcase
+      end
+
+      if emails.includes?(email) || emails.includes?(username)
+        logger.debug { "found user {#{email}, #{username}} in list of attendees" }
+        matching_events << event
+      elsif !username.empty? && emails.find(&.starts_with?(username))
+        logger.debug { "found email starting with username '#{username}' in list of attendees" }
+        matching_events << event
+      end
+    end
+
+    to_location_format matching_events
+  end
+
+  def macs_assigned_to(email : String? = nil, username : String? = nil) : Array(String)
+    locate_user(email, username).map(&.[](:mac))
+  end
+
+  def check_ownership_of(mac_address : String) : OwnershipMAC?
+    logger.debug { "searching for owner of #{mac_address}" }
+    sys_email = @calendar_id.downcase
+    if sys_email == mac_address.downcase && (host = current.try &.host)
+      {
+        location:    "meeting",
+        assigned_to: host,
+        mac_address: sys_email,
+      }
+    end
+  end
+
+  def device_locations(zone_id : String, location : String? = nil)
+    logger.debug { "searching devices in zone #{zone_id}" }
+    [] of Nil
   end
 end

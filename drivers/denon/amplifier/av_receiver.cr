@@ -1,4 +1,5 @@
 require "digest/md5"
+require "placeos-driver"
 require "placeos-driver/interface/muteable"
 require "placeos-driver/interface/powerable"
 require "placeos-driver/interface/switchable"
@@ -188,7 +189,8 @@ class Denon::Amplifier::AvReceiver < PlaceOS::Driver
     else
       return :ignore
     end
-    return task.try &.success
+
+    task.try &.success
   end
 
   protected def do_send(command, param = nil, **options)

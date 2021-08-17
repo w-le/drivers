@@ -1,5 +1,4 @@
-module Place; end
-
+require "placeos-driver/spec"
 require "placeos-driver/interface/locatable"
 
 WIRELESS_LOC = {
@@ -32,6 +31,7 @@ DriverSpecs.mock_driver "Place::LocationServices" do
   exec(:locate_user, "Steve").get.should eq([WIRELESS_LOC, DESK_LOC])
 end
 
+# :nodoc:
 class WirelessLocation < DriverSpecs::MockDriver
   include PlaceOS::Driver::Interface::Locatable
 
@@ -58,6 +58,7 @@ class WirelessLocation < DriverSpecs::MockDriver
   end
 end
 
+# :nodoc:
 class DeskLocation < DriverSpecs::MockDriver
   include PlaceOS::Driver::Interface::Locatable
 
