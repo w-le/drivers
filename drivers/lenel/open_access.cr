@@ -17,7 +17,6 @@ class Lenel::OpenAccess < PlaceOS::Driver
     directory_id:   "",
     username:       "",
     password:       "",
-    timezone:       "Asia/Dubai",
   })
 
   private getter client : OpenAccess::Client do
@@ -31,10 +30,6 @@ class Lenel::OpenAccess < PlaceOS::Driver
       wrapper.before_lenel_request.try &.each &.call(request)
     end
     wrapper
-  end
-
-  private getter default_timezone : String do
-    setting?(String, :timezone) || "Asia/Dubai"
   end
 
   def on_load
@@ -170,13 +165,10 @@ class Lenel::OpenAccess < PlaceOS::Driver
     personid : Int32,
     activate_epoch : Int32,
     deactivate_epoch : Int32,
-    uselimit : Int32? = nil,
-    timezone : String? = nil
+    uselimit : Int32? = nil
   )
-    time_zone = timezone || default_timezone
-    activate = Time.unix(activate_epoch).in Time::Location.load(time_zone)
-    deactivate = Time.unix(deactivate_epoch).in Time::Location.load(time_zone)
-    logger.debug { "Creating badge for cardholder #{personid}, valid from: #{activate} til #{deactivate}" }
+    activate = Time.unix(activate_epoch)
+    deactivate = Time.unix(deactivate_epoch)
 
     create_badge(
       type: type,
@@ -206,13 +198,10 @@ class Lenel::OpenAccess < PlaceOS::Driver
     activate_epoch : Int32,
     deactivate_epoch : Int32,
     id : Int64? = nil,
-    uselimit : Int32? = nil,
-    timezone : String? = nil
+    uselimit : Int32? = nil
   )
-    time_zone = timezone || default_timezone
-    activate = Time.unix(activate_epoch).in Time::Location.load(time_zone)
-    deactivate = Time.unix(deactivate_epoch).in Time::Location.load(time_zone)
-    logger.debug { "Updating badge #{badgekey} with id #{id} valid from: #{activate} til #{deactivate}" }
+    activate = Time.unix(activate_epoch)
+    deactivate = Time.unix(deactivate_epoch)
 
     update_badge(
       badgekey: badgekey,
@@ -274,6 +263,23 @@ class Lenel::OpenAccess < PlaceOS::Driver
   def delete_cardholder(id : Int32) : Nil
     logger.debug { "deleting cardholder #{id}" }
     client.delete Cardholder, **args
+  end
+
+  # List Logged Events
+  @[Security(Level::Support)]
+  def list_events(filter : String)
+    client.get_logged_events filter
+  end
+
+  # List events that occured during a given time window. Default to past 24h.
+  def list_events_in_range(
+    filter : String,
+    from : Time? = nil,
+    til : Time? = nil
+  )
+    til ||= Time.local
+    from ||= til - 1.day
+    client.get_logged_events (filter + %( AND timestamp >= #{from.to_s} AND timestamp <= #{til.to_s}))
   end
 end
 
