@@ -35,7 +35,7 @@ shards:
 
   cron_parser:
     git: https://github.com/kostya/cron_parser.git
-    version: 0.3.0
+    version: 0.4.0
 
   db:
     git: https://github.com/crystal-lang/crystal-db.git
@@ -51,7 +51,7 @@ shards:
 
   email:
     git: https://github.com/arcage/crystal-email.git
-    version: 0.6.2
+    version: 0.6.3
 
   etcd:
     git: https://github.com/place-labs/crystal-etcd.git
@@ -85,12 +85,8 @@ shards:
     git: https://github.com/spider-gazelle/inactive-support.git
     version: 0.4.0
 
-  inactive-support:
-    git: https://github.com/spider-gazelle/inactive-support.git
-    version: 0.1.1
-
   ipaddress:
-    git: https://github.com/Sija/ipaddress.cr.git
+    git: https://github.com/sija/ipaddress.cr.git
     version: 0.2.1
 
   json_mapping:
@@ -232,10 +228,6 @@ shards:
   stomp:
     git: https://github.com/spider-gazelle/stomp.git
     version: 1.0.1
-
-  stomp:
-    git: https://github.com/spider-gazelle/stomp.git
-    version: 0.9.0
 
   stumpy_core:
     git: https://github.com/stumpycr/stumpy_core.git
