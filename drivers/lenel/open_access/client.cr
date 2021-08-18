@@ -131,6 +131,21 @@ class Lenel::OpenAccess::Client
     ))[:item_list]
   end
 
+  def raw_lookup(
+    type_name : String,
+    filter : String? = nil,
+    page_number : Int32? = nil,
+    page_size : Int32? = nil,
+    order_by : String? = nil
+  )
+    params = HTTP::Params.new
+    args.each do |key, val|
+      params.add key.to_s, val unless val.nil?
+    end
+    response = transport.get(path: "/instances?version=1.0&#{params}")
+    response.body
+  end
+
   # Counts the number of instances of *entity*.
   #
   # *filter* may optionally be used to specify a subset of these.

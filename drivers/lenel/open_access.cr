@@ -287,6 +287,7 @@ class Lenel::OpenAccess < PlaceOS::Driver
     client.get_logged_events filter
   end
 
+  @[Security(Level::Support)]
   # List events that occured during a given time window. Default to past 24h.
   def list_events_in_range(
     filter : String,
@@ -297,7 +298,13 @@ class Lenel::OpenAccess < PlaceOS::Driver
     from ||= til - 1.day
     client.get_logged_events (filter + %( AND timestamp >= #{from.to_s} AND timestamp <= #{til.to_s}))
   end
+  
+  @[Security(Level::Support)]
+  def search(type_name : String, filter : String? = nil)
+    client.raw_lookup type_name, filter
+  end
 end
+
 
 ################################################################################
 # The intent below is to provide a `HTTP::Client`-ish object that uses the
