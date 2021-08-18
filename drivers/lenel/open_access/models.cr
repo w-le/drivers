@@ -155,4 +155,36 @@ module Lenel::OpenAccess::Models
   struct Cardholder < Person
     getter email : String
   end
+
+  struct Reader < Element
+    getter accessMode : Int32?
+    getter address : Int32?
+    getter controlType : Int32?
+    getter extendedOpenTime : Int32?
+    getter extendedStrikeTime : Int32?
+    getter gatewayAddress : Int32?
+    getter gatewayIPPort : Int32?
+    getter offlineMode : Int32?
+    getter mode : Int32?
+    getter openTime : Int32?
+    getter panelID : Int32?
+    getter portNumber : Int32?
+    getter readerID : Int32?
+    getter readerNumber : Int32?
+    getter slaveID : Int32?
+    getter strikeTime : Int32?
+    getter timeAttendanceType : Int32?
+    getter aux1Name : String?
+    getter aux2Name : String?
+    getter aux3Name : String?
+    getter friendlyName : String?
+    getter gatewayHostName : String?
+    getter hostName : String?
+    getter name : String?
+    getter out1Name : String?
+    getter out2Name : String?
+    getter panelTypeName : String?
+    getter isPairedMaster : Bool?
+    getter isPairedSlave : Bool?
+  end
 end

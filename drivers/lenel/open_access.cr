@@ -265,6 +265,12 @@ class Lenel::OpenAccess < PlaceOS::Driver
     client.delete Cardholder, **args
   end
 
+  # List card readers matching a given filter
+  @[Security(Level::Support)]
+  def search_readers(filter : String)
+    client.lookup Reader, filter
+  end
+
   # List Logged Events
   @[Security(Level::Support)]
   def list_events(filter : String)
