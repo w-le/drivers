@@ -135,12 +135,12 @@ class Lenel::OpenAccess::Client
     type_name : String,
     filter : String? = nil,
     page_number : Int32? = nil,
-    page_size : Int32? = nil,
+    page_size : Int32? = 100,
     order_by : String? = nil
   )
     params = HTTP::Params.new
     args.each do |key, val|
-      params.add key.to_s, val unless val.nil?
+      params.add key.to_s, val.to_s unless val.nil?
     end
     response = transport.get(path: "/instances?version=1.0&#{params}")
     response.body
@@ -184,12 +184,12 @@ class Lenel::OpenAccess::Client
   def get_logged_events(
     filter : String? = nil,
     page_number : Int32? = nil,
-    page_size : Int32? = nil,
+    page_size : Int32? = 100,
     order_by : String? = nil
   )
     params = HTTP::Params.new
     args.each do |key, val|
-      params.add key.to_s, val unless val.nil?
+      params.add key.to_s, val.to_s unless val.nil?
     end
     response = transport.get(path: "/logged_events?version=1.0&#{params}")
     response.body
