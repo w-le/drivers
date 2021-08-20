@@ -296,15 +296,14 @@ class Lenel::OpenAccess < PlaceOS::Driver
   )
     til ||= Time.local
     from ||= til - 1.day
-    client.get_logged_events (filter + %( AND timestamp >= #{from.to_s} AND timestamp <= #{til.to_s}))
+    client.get_logged_events(filter + %( AND timestamp >= \"#{from.to_s}\" AND timestamp <= \"#{til.to_s}\"))
   end
-  
+
   @[Security(Level::Support)]
   def search(type_name : String, filter : String? = nil)
     client.raw_lookup type_name, filter
   end
 end
-
 
 ################################################################################
 # The intent below is to provide a `HTTP::Client`-ish object that uses the
