@@ -283,8 +283,8 @@ class Lenel::OpenAccess < PlaceOS::Driver
 
   # List Logged Events
   @[Security(Level::Support)]
-  def list_events(filter : String)
-    client.get_logged_events filter
+  def list_events(filter : String, page_number : Int32? = nil)
+    client.get_logged_events(filter, page_number)
   end
 
   @[Security(Level::Support)]
