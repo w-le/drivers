@@ -21,7 +21,9 @@ class Vergesense::MqttExport < PlaceOS::Driver
   @mqtt_root_topic : String = "/t/root-topic/"
   @floors_to_export : Array(String) = [] of String
   @debug : Bool = false
+  
   @subscriptions : Int32 = 0
+  @previous_vs_spaces = [] of Space
 
   def on_load
     on_update
@@ -30,7 +32,7 @@ class Vergesense::MqttExport < PlaceOS::Driver
   def on_update
     @mqtt_root_topic  = setting(String, :mqtt_root_topic) || "/t/root-topic"
     @floors_to_export = setting(Array(String), :floors_to_export) || [] of String
-    @edbug = setting(Bool, :debug) || false
+    @debug = setting(Bool, :debug) || false
 
     subscriptions.clear
     @subscriptions = 0
@@ -49,11 +51,13 @@ class Vergesense::MqttExport < PlaceOS::Driver
   end
 
   private def vergesense_to_mqtt(vergesense_floor : Floor)
-    vergesense_floor.spaces.each do |s|
+    changed_spaces = vergesense_floor.spaces - @previous_vs_spaces
+    changed_spaces.each do |s|
       topic = [ @mqtt_root_topic, s.building_ref_id, "-", s.floor_ref_id, ".", s.space_type, ".", s.space_ref_id, ".", "count" ].join
       payload = s.people ? (s.people.not_nil!.count || 0) : 0  # There must be a neater way to do this
       mqtt.publish(topic, payload.to_s)
       logger.debug { "Published #{payload} to #{topic}" } if @debug
     end
+    @previous_vs_spaces = vergesense_floor.spaces
   end
 end
