@@ -52,6 +52,7 @@ class Vergesense::MqttExport < PlaceOS::Driver
 
   private def vergesense_to_mqtt(vergesense_floor : Floor)
     changed_spaces = vergesense_floor.spaces - @previous_vs_spaces
+    logger.debug { "#{changed_spaces.count}/#{vergesense_floor.spaces.count} spaces have changed" } if @debug
     changed_spaces.each do |s|
       topic = [ @mqtt_root_topic, s.building_ref_id, "-", s.floor_ref_id, ".", s.space_type, ".", s.space_ref_id, ".", "count" ].join
       payload = s.people ? (s.people.not_nil!.count || 0) : 0  # There must be a neater way to do this
