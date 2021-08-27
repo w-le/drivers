@@ -52,7 +52,7 @@ class Vergesense::MqttExport < PlaceOS::Driver
     vergesense_floor.spaces.each do |s|
       topic = [ @mqtt_root_topic, s.building_ref_id, "-", s.floor_ref_id, ".", s.space_type, ".", s.space_ref_id, ".", "count" ].join
       payload = s.people ? (s.people.not_nil!.count || 0) : 0  # There must be a neater way to do this
-      mqtt.publish(topic, payload)
+      mqtt.publish(topic, payload.to_s)
       logger.debug { "Published #{payload} to #{topic}" } if @debug
     end
   end
