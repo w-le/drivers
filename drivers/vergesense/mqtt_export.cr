@@ -3,8 +3,8 @@ require "./models"
 
 class Vergesense::MqttExport < PlaceOS::Driver
 
-  descriptive_name "Vergesense MQTT Exporter"
-  generic_name :VergesenseMqttExport
+  descriptive_name "Vergesense to MQTT Exporter"
+  generic_name :VergesenseToMQTT
   description %(Export Vergesense people count data to an MQTT consumer)
 
   accessor vergesense : Vergesense_1
