@@ -129,8 +129,13 @@ module Lenel::OpenAccess::Models
 
   struct Badge < Element
     getter badgekey : Int32
+
+    @[JSON::Field(converter: Lenel::TimeConverter)]
     getter activate : Time?
+
+    @[JSON::Field(converter: Lenel::TimeConverter)]
     getter deactivate : Time?
+
     getter id : Int64?
     getter personid : Int32?
     getter status : Int32?

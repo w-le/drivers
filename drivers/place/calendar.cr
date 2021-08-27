@@ -232,7 +232,7 @@ class Place::Calendar < PlaceOS::Driver
   end
 
   @[Security(Level::Support)]
-  def list_events(calendar_id : String, period_start : Int64, period_end : Int64, time_zone : String? = nil, user_id : String? = nil)
+  def list_events(calendar_id : String, period_start : Int64, period_end : Int64, time_zone : String? = nil, user_id : String? = nil, include_cancelled : Bool = false)
     location = time_zone ? Time::Location.load(time_zone) : Time::Location.local
     period_start = Time.unix(period_start).in location
     period_end = Time.unix(period_end).in location
@@ -242,17 +242,18 @@ class Place::Calendar < PlaceOS::Driver
 
     client &.list_events(user_id, calendar_id,
       period_start: period_start,
-      period_end: period_end
+      period_end: period_end,
+      showDeleted: include_cancelled
     )
   end
 
   @[Security(Level::Support)]
-  def delete_event(calendar_id : String, event_id : String, user_id : String? = nil)
+  def delete_event(calendar_id : String, event_id : String, user_id : String? = nil, notify : Bool = false)
     user_id = user_id || @service_account.presence || calendar_id
 
     logger.debug { "deleting event #{event_id} on #{calendar_id}" }
 
-    client &.delete_event(user_id, event_id, calendar_id: calendar_id)
+    client &.delete_event(user_id, event_id, calendar_id: calendar_id, notify: notify)
   end
 
   @[Security(Level::Support)]
@@ -265,20 +266,33 @@ class Place::Calendar < PlaceOS::Driver
     location : String? = nil,
     timezone : String? = nil,
     user_id : String? = nil,
-    calendar_id : String? = nil
+    calendar_id : String? = nil,
+    online_meeting_id : String? = nil,
+    online_meeting_provider : String? = nil,
+    online_meeting_url : String? = nil,
+    online_meeting_sip : String? = nil,
+    online_meeting_phones : Array(String)? = nil,
+    online_meeting_pin : String? = nil
   )
     user_id = (user_id || @service_account.presence || calendar_id).not_nil!
     calendar_id = calendar_id || user_id
 
     logger.debug { "creating event on #{calendar_id}" }
 
-    event = PlaceCalendar::Event.new
-    event.host = calendar_id
-    event.title = title
-    event.body = description
-    event.location = location
-    event.timezone = timezone
-    event.attendees = attendees
+    event = PlaceCalendar::Event.new(
+      host: calendar_id,
+      title: title,
+      body: description,
+      location: location,
+      timezone: timezone,
+      attendees: attendees,
+      online_meeting_id: online_meeting_id,
+      online_meeting_url: online_meeting_url,
+      online_meeting_sip: online_meeting_sip,
+      online_meeting_pin: online_meeting_pin,
+      online_meeting_phones: online_meeting_phones,
+      online_meeting_provider: online_meeting_provider,
+    )
 
     tz = Time::Location.load(timezone) if timezone
     event.event_start = timezone ? Time.unix(event_start).in tz.not_nil! : Time.unix(event_start)

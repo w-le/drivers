@@ -347,8 +347,15 @@ class Floorsense::Desks < PlaceOS::Driver
   end
 
   def confirm_booking(booking_id : String | Int64)
-    response = post("/restapi/desk-confirm?bkid=#{booking_id}", headers: default_headers)
-    check_success(response)
+    response = post("/restapi/booking-confirm", headers: {
+      "Accept"        => "application/json",
+      "Authorization" => get_token,
+      "Content-Type"  => "application/x-www-form-urlencoded",
+    }, body: URI::Params.build { |form|
+      form.add("bkid", booking_id.to_s)
+      form.add("method", "1")
+    })
+    parse response, JSON::Any
   end
 
   def create_booking(
