@@ -57,9 +57,10 @@ class Vergesense::MqttExport < PlaceOS::Driver
     logger.debug { "#{changed_spaces.size}/#{vergesense_floor.spaces.size} spaces have changed" } if @debug
     # Publish the new values 
     changed_spaces.each do |s|
-      topic = [ @mqtt_root_topic, s.building_ref_id, "-", s.floor_ref_id, ".", s.space_type, ".", s.space_ref_id.gsub(/[\w\\\/]/,""), ".", "count" ].join
+      space_id = s.space_ref_id.gsub(/[ \/]/,"")
+      topic = [ @mqtt_root_topic, s.building_ref_id, "-", s.floor_ref_id, ".", s.space_type, ".", space_id, ".", "count" ].join
       # Store the current value, for comparison next time
-      @previous_counts[s.space_ref_id] = payload = s.people.try &.count || 0_u32
+      @previous_counts[space_id] = payload = s.people.try &.count || 0_u32
       mqtt.publish(topic, payload.to_s).get
       logger.debug { "Published #{payload} to #{topic}" } if @debug
     end
