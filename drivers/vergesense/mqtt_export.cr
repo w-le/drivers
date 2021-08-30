@@ -23,7 +23,7 @@ class Vergesense::MqttExport < PlaceOS::Driver
   @debug : Bool = false
   
   @subscriptions : Int32 = 0
-  @previous_counts = Hash(String, Int32).new
+  @previous_counts = Hash(String, UInt32).new
 
   def on_load
     on_update
@@ -59,7 +59,7 @@ class Vergesense::MqttExport < PlaceOS::Driver
     changed_spaces.each do |s|
       topic = [ @mqtt_root_topic, s.building_ref_id, "-", s.floor_ref_id, ".", s.space_type, ".", s.space_ref_id, ".", "count" ].join
       # Store the current value, for comparison next time
-      @previous_counts[s.space_ref_id] = payload = s.people.try &.count || 0
+      @previous_counts[s.space_ref_id] = payload = s.people.try &.count || 0_u32
       mqtt.publish(topic, payload.to_s).get
       logger.debug { "Published #{payload} to #{topic}" } if @debug
     end
