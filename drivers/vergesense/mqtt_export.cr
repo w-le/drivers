@@ -23,7 +23,7 @@ class Vergesense::MqttExport < PlaceOS::Driver
   @debug : Bool = false
   
   @subscriptions : Int32 = 0
-  @previous_counts = Hash(String, Int).new
+  @previous_counts = Hash(String, Int32).new
 
   def on_load
     on_update
@@ -46,7 +46,8 @@ class Vergesense::MqttExport < PlaceOS::Driver
 
   def inspect_state
     {
-      vergesense_subscriptions: @subscriptions
+      vergesense_subscriptions: @subscriptions,
+      people_counts: @previous_counts
     }
   end
 
