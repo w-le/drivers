@@ -23,7 +23,7 @@ class Vergesense::MqttExport < PlaceOS::Driver
   @debug : Bool = false
   
   @subscriptions : Int32 = 0
-  @previous_vs_spaces = [] of Space
+  @previous_counts = Hash(String, Int).new
 
   def on_load
     on_update
@@ -51,14 +51,16 @@ class Vergesense::MqttExport < PlaceOS::Driver
   end
 
   private def vergesense_to_mqtt(vergesense_floor : Floor)
-    changed_spaces = vergesense_floor.spaces - @previous_vs_spaces
+    # Determine which spaces have had their people count change
+    changed_spaces = vergesense_floor.spaces.reject { |s| s.people.try &.count == @previous_counts[s.space_ref_id] }
     logger.debug { "#{changed_spaces.size}/#{vergesense_floor.spaces.size} spaces have changed" } if @debug
+    # Publish the new values 
     changed_spaces.each do |s|
       topic = [ @mqtt_root_topic, s.building_ref_id, "-", s.floor_ref_id, ".", s.space_type, ".", s.space_ref_id, ".", "count" ].join
-      payload = s.people ? (s.people.not_nil!.count || 0) : 0  # There must be a neater way to do this
+      # Store the current value, for comparison next time
+      @previous_counts[s.space_ref_id] = payload = s.people.try &.count || 0
       mqtt.publish(topic, payload.to_s).get
       logger.debug { "Published #{payload} to #{topic}" } if @debug
     end
-    @previous_vs_spaces = vergesense_floor.spaces
   end
 end
