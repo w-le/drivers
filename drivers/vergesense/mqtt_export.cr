@@ -53,7 +53,7 @@ class Vergesense::MqttExport < PlaceOS::Driver
 
   private def vergesense_to_mqtt(vergesense_floor : Floor)
     # Determine which spaces have had their people count change
-    changed_spaces = vergesense_floor.spaces.reject { |s| s.people.try &.count == @previous_counts[s.space_ref_id] }
+    changed_spaces = vergesense_floor.spaces.reject { |s| s.people.try &.count == @previous_counts[s.space_ref_id]? }
     logger.debug { "#{changed_spaces.size}/#{vergesense_floor.spaces.size} spaces have changed" } if @debug
     # Publish the new values 
     changed_spaces.each do |s|
