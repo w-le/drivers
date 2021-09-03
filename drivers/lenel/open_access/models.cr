@@ -1,9 +1,9 @@
 require "json"
 
 # Ensure that UTC time strings provide the offset as "+00:00" instead of "Z", as required by Openaccess
-struct Time
-  def to_json(json : JSON::Builder)
-    json.string(self.to_s "%FT%T%:z")
+module Lenel::TimeConverter
+  def self.to_json(value : Time, json : JSON::Builder)
+    json.string(value.to_s("%FT%T%:z"))
   end
 end
 
