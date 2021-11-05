@@ -1,6 +1,7 @@
 require "placeos-driver"
 require "place_calendar"
 require "placeos-driver/interface/locatable"
+require "placeos-driver/interface/sensor"
 
 class Place::Bookings < PlaceOS::Driver
   include Interface::Locatable
@@ -26,6 +27,7 @@ class Place::Bookings < PlaceOS::Driver
     catering_ui: "https://if.panel/to_be_used_for_catering",
 
     include_cancelled_bookings: false,
+    hide_qr_code:               false,
   })
 
   accessor calendar : Calendar_1
@@ -42,6 +44,8 @@ class Place::Bookings < PlaceOS::Driver
   @cache_days : Time::Span = 30.days
   @include_cancelled_bookings : Bool = false
 
+  @perform_sensor_search : Bool = true
+
   def on_load
     monitor("staff/event/changed") { |_subscription, payload| check_change(payload) }
 
@@ -52,7 +56,8 @@ class Place::Bookings < PlaceOS::Driver
     schedule.clear
     @calendar_id = setting?(String, :calendar_id).presence || system.email.not_nil!
 
-    schedule.in(Random.rand(60).seconds + Random.rand(1000).milliseconds) { poll_events }
+    @perform_sensor_search = true
+    schedule.in(Random.rand(59).seconds + Random.rand(1000).milliseconds) { poll_events }
 
     cache_polling_period = (setting?(UInt32, :cache_polling_period) || 2_u32).minutes
     cache_polling_period += Random.rand(30).seconds + Random.rand(1000).milliseconds
@@ -83,6 +88,7 @@ class Place::Bookings < PlaceOS::Driver
     @include_cancelled_bookings = setting?(Bool, :include_cancelled_bookings) || false
 
     # Write to redis last on the off chance there is a connection issue
+    self[:room_name] = setting?(String, :room_name).presence || config.control_system.not_nil!.display_name.presence || config.control_system.not_nil!.name
     self[:default_title] = @default_title
     self[:disable_book_now] = @disable_book_now
     self[:disable_end_meeting] = @disable_end_meeting
@@ -90,6 +96,8 @@ class Place::Bookings < PlaceOS::Driver
     self[:pending_before] = pending_before
     self[:control_ui] = setting?(String, :control_ui)
     self[:catering_ui] = setting?(String, :catering_ui)
+
+    self[:show_qr_code] = !(setting?(Bool, :hide_qr_code) || false)
   end
 
   # This is how we check the rooms status
@@ -150,6 +158,8 @@ class Place::Bookings < PlaceOS::Driver
   end
 
   def poll_events : Nil
+    check_for_sensors if @perform_sensor_search
+
     now = Time.local @time_zone
     start_of_week = now.at_beginning_of_week.to_unix
     four_weeks_time = start_of_week + @cache_days.to_i
@@ -365,5 +375,47 @@ class Place::Bookings < PlaceOS::Driver
   def device_locations(zone_id : String, location : String? = nil)
     logger.debug { "searching devices in zone #{zone_id}" }
     [] of Nil
+  end
+
+  protected def check_for_sensors
+    drivers = system.implementing(Interface::Sensor)
+
+    subscriptions.clear
+
+    # Prefer people count data in a space
+    count_data = drivers.sensors("people_count").get.flat_map(&.as_a).first?
+    if count_data && count_data["module_id"]?.try(&.raw.is_a?(String))
+      self[:sensor_name] = count_data["name"].as_s
+      subscriptions.subscribe(count_data["module_id"].as_s, count_data["binding"].as_s) do |_sub, payload|
+        value = (Float64 | Nil).from_json payload
+        if value
+          self[:people_count] = value
+          self[:presence] = value > 0.0
+        else
+          self[:people_count] = self[:presence] = nil
+        end
+      end
+    else
+      self[:people_count] = nil
+
+      # Fallback to checking for presence
+      presence = drivers.sensors("presence").get.flat_map(&.as_a).first?
+      if presence && presence["module_id"]?.try(&.raw.is_a?(String))
+        self[:sensor_name] = presence["name"].as_s
+        subscriptions.subscribe(presence["module_id"].as_s, presence["binding"].as_s) do |_sub, payload|
+          value = (Float64 | Nil).from_json payload
+          self[:presence] = value ? value > 0.0 : nil
+        end
+      else
+        self[:sensor_name] = self[:presence] = nil
+      end
+    end
+
+    @perform_sensor_search = false
+  rescue error
+    self[:people_count] = nil
+    self[:presence] = nil
+    self[:sensor_name] = nil
+    logger.error(exception: error) { "checking for sensors" }
   end
 end

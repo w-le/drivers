@@ -11,7 +11,7 @@ class Ashrae::BACnet < PlaceOS::Driver
   description %(makes BACnet data available to other drivers in PlaceOS)
 
   # Hookup dispatch to the BACnet BBMD device
-  uri_base "ws://dispatch/api/server/udp_dispatch?port=47808&accept=192.168.0.1"
+  uri_base "ws://dispatch/api/dispatch/v1/udp_dispatch?port=47808&accept=192.168.0.1"
 
   default_settings({
     dispatcher_key: "secret",
@@ -45,6 +45,8 @@ class Ashrae::BACnet < PlaceOS::Driver
   @bbmd_ip : Socket::IPAddress = Socket::IPAddress.new("127.0.0.1", 0xBAC0)
   @devices : Hash(UInt32, DeviceInfo) = {} of UInt32 => DeviceInfo
   @mutex : Mutex = Mutex.new(:reentrant)
+  @bbmd_forwarding : Array(UInt8) = [] of UInt8
+  @seen_devices : Hash(UInt32, DeviceAddress) = {} of UInt32 => DeviceAddress
 
   protected def get_device(device_id : UInt32)
     @mutex.synchronize { @devices[device_id]? }
@@ -60,11 +62,26 @@ class Ashrae::BACnet < PlaceOS::Driver
     client = ::BACnet::Client::IPv4.new
     client.on_transmit do |message, address|
       if address.address == Socket::IPAddress::BROADCAST
+        if @bbmd_forwarding.size == 4
+          message.data_link.request_type = ::BACnet::Message::IPv4::Request::ForwardedNPDU
+          message.data_link.address.ip1 = @bbmd_forwarding[0]
+          message.data_link.address.ip2 = @bbmd_forwarding[1]
+          message.data_link.address.ip3 = @bbmd_forwarding[2]
+          message.data_link.address.ip4 = @bbmd_forwarding[3]
+          message.data_link.address.port = 47808_u16
+        end
+
         logger.debug { "sending broadcase message #{message.inspect}" }
 
         # send to the known devices (in case BBMD does not forward message)
         devices = setting?(Array(DeviceAddress), :known_devices) || [] of DeviceAddress
-        devices.each { |dev| server.send message, to: dev.address }
+        devices.each do |dev|
+          begin
+            server.send message, to: dev.address
+          rescue error
+            logger.warn(exception: error) { "error sending message to #{dev.address}" }
+          end
+        end
 
         # Send this message to the BBMD
         message.data_link.request_type = ::BACnet::Message::IPv4::Request::DistributeBroadcastToNetwork
@@ -81,7 +98,7 @@ class Ashrae::BACnet < PlaceOS::Driver
     @bacnet_client = client
 
     # Track the discovery of devices
-    registry = ::BACnet::Client::DeviceRegistry.new(client)
+    registry = ::BACnet::Client::DeviceRegistry.new(client, logger)
     registry.on_new_device { |device| new_device_found(device) }
     @device_registry = registry
 
@@ -111,6 +128,9 @@ class Ashrae::BACnet < PlaceOS::Driver
 
   def on_update
     bbmd_ip = setting?(String, :bbmd_ip) || ""
+    bbmd_forwarding = setting?(String, :bbmd_forwarding) || ""
+
+    @bbmd_forwarding = bbmd_forwarding.strip.split(".").select(&.presence).map(&.to_u8)
     @bbmd_ip = Socket::IPAddress.new(bbmd_ip, 0xBAC0) if bbmd_ip.presence
     @verbose_debug = setting?(Bool, :verbose_debug) || false
 
@@ -187,13 +207,22 @@ class Ashrae::BACnet < PlaceOS::Driver
   end
 
   def query_known_devices
+    sent = [] of UInt32
+    @seen_devices.each_value do |info|
+      sent << info.id.not_nil!
+      logger.debug { "inspecting #{info.address} - #{info.id}" }
+      device_registry.inspect_device(info.address, info.identifier, info.net, info.addr)
+    end
     devices = setting?(Array(DeviceAddress), :known_devices) || [] of DeviceAddress
     devices.each do |info|
-      if info.id
+      if id = info.id
+        next if id.in? sent
+        sent << id
+        logger.debug { "inspecting #{info.address} - #{info.id}" }
         device_registry.inspect_device(info.address, info.identifier, info.net, info.addr)
       end
     end
-    "inspected #{devices.size} devices"
+    "inspected #{sent.size} devices"
   end
 
   def poll_device(device_id : UInt32)
@@ -334,9 +363,55 @@ class Ashrae::BACnet < PlaceOS::Driver
       message = IO::Memory.new(protocol.data).read_bytes(::BACnet::Message::IPv4)
       logger.debug { "dispatch sent:\n#{message.inspect}" } if @verbose_debug
       bacnet_client.received message, @bbmd_ip
+
+      app = message.application
+
+      is_iam = false
+      is_cov = case app
+               when ::BACnet::ConfirmedRequest
+                 app.service.cov_notification?
+               when ::BACnet::UnconfirmedRequest
+                 is_iam = app.service.i_am?
+                 app.service.cov_notification?
+               else
+                 false
+               end
+      network = message.network
+
+      if network && is_cov
+        ip = if message.data_link.request_type.forwarded_npdu?
+               ip_add = message.data_link.address
+               "#{ip_add.ip1}.#{ip_add.ip2}.#{ip_add.ip3}.#{ip_add.ip4}"
+             else
+               protocol.ip_address
+             end
+        if network.source_specifier
+          addr = network.source_address
+          net = network.source.network
+        end
+        device = message.objects.find { |obj| obj.tag == 1 }.not_nil!.to_object_id.instance_number
+        # prop = message.objects.find { |obj| obj.tag == 2 }
+        @seen_devices[device] = DeviceAddress.new(ip, device, net, addr)
+      end
+
+      if network && is_iam
+        ip = if message.data_link.request_type.forwarded_npdu?
+               ip_add = message.data_link.address
+               "#{ip_add.ip1}.#{ip_add.ip2}.#{ip_add.ip3}.#{ip_add.ip4}"
+             else
+               protocol.ip_address
+             end
+        details = ::BACnet::Client::Message::IAm.parse(message)
+        device = details[:object_id].instance_number
+        @seen_devices[device] = DeviceAddress.new(ip, device, details[:network], details[:address])
+      end
     end
 
     task.try &.success
+  end
+
+  def seen_devices
+    @seen_devices
   end
 
   # ======================
@@ -347,12 +422,11 @@ class Ashrae::BACnet < PlaceOS::Driver
     sensor_type = case object.unit
                   when Nil
                     # required for case statement to work
-                  when .degrees_fahrenheit?, .degrees_celsius?, .degrees_kelvin?
-                    if object.name.includes? "air"
-                      SensorType::AmbientTemp
-                    else
-                      SensorType::Temperature
+                    if object.name.includes? "count"
+                      SensorType::Counter
                     end
+                  when .degrees_fahrenheit?, .degrees_celsius?, .degrees_kelvin?
+                    SensorType::Temperature
                   when .percent_relative_humidity?
                     SensorType::Humidity
                   when .pounds_force_per_square_inch?
@@ -381,6 +455,49 @@ class Ashrae::BACnet < PlaceOS::Driver
     return nil unless sensor_type
     return nil if filter_type && sensor_type != filter_type
 
+    unit = case object.unit
+           when Nil
+           when .degrees_fahrenheit?          ; "[degF]"
+           when .degrees_celsius?             ; "Cel"
+           when .degrees_kelvin?              ; "K"
+           when .pounds_force_per_square_inch?; "[psi]"
+           when .volts?                       ; "V"
+           when .millivolts?                  ; "mV"
+           when .kilovolts?                   ; "kV"
+           when .megavolts?                   ; "MV"
+           when .milliamperes?                ; "mA"
+           when .amperes?                     ; "A"
+           when .cubic_feet?                  ; "[cft_i]"
+           when .cubic_meters?                ; "m3"
+           when .imperial_gallons?            ; "[gal_br]"
+           when .milliliters?                 ; "ml"
+           when .liters?                      ; "l"
+           when .us_gallons?                  ; "[gal_us]"
+           when .milliwatts?                  ; "mW"
+           when .watts?                       ; "W"
+           when .kilowatts?                   ; "kW"
+           when .megawatts?                   ; "MW"
+           when .watt_hours?                  ; "Wh"
+           when .kilowatt_hours?              ; "kWh"
+           when .megawatt_hours?              ; "MWh"
+           when .hertz?                       ; "Hz"
+           when .kilohertz?                   ; "kHz"
+           when .megahertz?                   ; "MHz"
+           when .cubic_feet_per_second?       ; "[cft_i]/s"
+           when .cubic_feet_per_minute?       ; "[cft_i]/min"
+           when .cubic_feet_per_hour?         ; "[cft_i]/h"
+           when .cubic_meters_per_second?     ; "m3/s"
+           when .cubic_meters_per_minute?     ; "m3/min"
+           when .cubic_meters_per_hour?       ; "m3/h"
+           when .imperial_gallons_per_minute? ; "[gal_br]/min"
+           when .milliliters_per_second?      ; "ml/s"
+           when .liters_per_second?           ; "l/s"
+           when .liters_per_minute?           ; "l/min"
+           when .liters_per_hour?             ; "l/h"
+           when .us_gallons_per_minute?       ; "[gal_us]/min"
+           when .us_gallons_per_hour?         ; "[gal_us]/h"
+           end
+
     obj_value = object_value(object)
     value = case obj_value
             in String, Nil, ::Time, ::BACnet::PropertyIdentifier::PropertyType, Tuple(ObjectType, UInt32)
@@ -400,7 +517,8 @@ class Ashrae::BACnet < PlaceOS::Driver
       id: "#{object.object_type}[#{object.instance_id}]",
       name: "#{device.name}: #{object.name}",
       module_id: module_id,
-      binding: object_binding(device_id, object)
+      binding: object_binding(device_id, object),
+      unit: unit
     )
   end
 
